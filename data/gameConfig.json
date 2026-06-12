@@ -1,0 +1,16 @@
+{
+    "version": "1.0.0",
+    "gameName": "沙盒末日生存",
+    "tileSize": 32,
+    "mapWidth": 100,
+    "mapHeight": 100,
+    "playerSpeed": 5,
+    "playerRunningSpeed": 8,
+    "autoSaveInterval": 60000,
+    "maxSaves": 5,
+    "staminaDrainRate": 0.1,
+    "staminaRegenRate": 0.05,
+    "hungerDrainRate": 0.02,
+    "thirstDrainRate": 0.03,
+    "healthDrainRate": 0.1
+}

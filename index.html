@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沙盒末日生存</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-overlay">
+            <div id="hud">
+                <div class="hud-item">
+                    <span class="hud-label">生命值:</span>
+                    <span id="health-value">100</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">饥饿值:</span>
+                    <span id="hunger-value">100</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">口渴值:</span>
+                    <span id="thirst-value">100</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">体力:</span>
+                    <span id="stamina-value">100</span>
+                </div>
+            </div>
+            <div id="mini-map">
+                <canvas id="mini-map-canvas"></canvas>
+            </div>
+            <div id="inventory">
+                <div class="inventory-grid"></div>
+            </div>
+        </div>
+        <div id="loading-screen">
+            <div id="loading-progress">
+                <div id="loading-bar"></div>
+            </div>
+            <span id="loading-text">加载中...</span>
+        </div>
+        <div id="start-screen">
+            <h1>沙盒末日生存</h1>
+            <button id="new-game-btn">新游戏</button>
+            <button id="load-game-btn">读取存档</button>
+        </div>
+        <div id="pause-menu">
+            <h2>暂停</h2>
+            <button id="resume-btn">继续游戏</button>
+            <button id="save-game-btn">保存游戏</button>
+            <button id="quit-btn">退出游戏</button>
+        </div>
+    </div>
+    
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+{
+    "items": {
+        "wood": {
+            "id": "wood",
+            "name": "木材",
+            "description": "从树木上砍伐获得的木材",
+            "icon": "wood.png",
+            "stackable": true,
+            "maxStack": 99
+        },
+        "stone": {
+            "id": "stone",
+            "name": "石头",
+            "description": "从岩石上采集的石头",
+            "icon": "stone.png",
+            "stackable": true,
+            "maxStack": 99
+        },
+        "food": {
+            "id": "food",
+            "name": "食物",
+            "description": "可食用的食物",
+            "icon": "food.png",
+            "stackable": true,
+            "maxStack": 99,
+            "healValue": 20,
+            "hungerValue": 30
+        },
+        "water": {
+            "id": "water",
+            "name": "水",
+            "description": "干净的饮用水",
+            "icon": "water.png",
+            "stackable": true,
+            "maxStack": 99,
+            "thirstValue": 30
+        },
+        "seeds": {
+            "id": "seeds",
+            "name": "种子",
+            "description": "可以种植的种子",
+            "icon": "seeds.png",
+            "stackable": true,
+            "maxStack": 99
+        },
+        "axe": {
+            "id": "axe",
+            "name": "斧头",
+            "description": "用于砍伐树木",
+            "icon": "axe.png",
+            "stackable": false,
+            "maxStack": 1,
+            "toolType": "axe",
+            "efficiency": 1.5
+        },
+        "pickaxe": {
+            "id": "pickaxe",
+            "name": "镐",
+            "description": "用于采集石头",
+            "icon": "pickaxe.png",
+            "stackable": false,
+            "maxStack": 1,
+            "toolType": "pickaxe",
+            "efficiency": 1.5
+        },
+        "shovel": {
+            "id": "shovel",
+            "name": "铲子",
+            "description": "用于挖掘土地",
+            "icon": "shovel.png",
+            "stackable": false,
+            "maxStack": 1,
+            "toolType": "shovel",
+            "efficiency": 1.5
+        }
+    }
+}
