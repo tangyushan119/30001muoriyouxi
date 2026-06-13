@@ -26,13 +26,19 @@ export class GameMap {
                     collision: this.isCollidable(tileType),
                     elevation: this.getElevation(x, y),
                     waterLevel: 0,
-                    vegetation: this.getVegetation(x, y),
+                    vegetation: null,
                     buildable: this.isBuildable(tileType),
                     farmable: this.isFarmable(tileType),
                     explored: false
                 };
             }
         }
+        
+        this.generateStreams();
+        this.generateDirtRoads();
+        this.generateStonePatches();
+        this.generateForestClusters();
+        this.generateScatteredVegetation();
     }
 
     getTileType(x, y) {
@@ -62,7 +68,7 @@ export class GameMap {
     }
 
     isCollidable(tileType) {
-        return tileType === 'water' || tileType === 'rock' || tileType === 'mountain';
+        return tileType === 'water' || tileType === 'rock' || tileType === 'mountain' || tileType === 'stream';
     }
 
     isBuildable(tileType) {
@@ -78,14 +84,143 @@ export class GameMap {
         return Math.floor(noise * 5);
     }
 
-    getVegetation(x, y) {
-        const noise = this.noise(x + 1000, y + 1000);
-        if (noise > 0.4 && noise < 0.7) {
-            const rand = Math.random();
-            if (rand < 0.3) return 'tree';
-            if (rand < 0.5) return 'bush';
+    generateStreams() {
+        const streamCount = 3 + Math.floor(Math.random() * 3);
+        
+        for (let i = 0; i < streamCount; i++) {
+            this.createStream();
         }
-        return null;
+    }
+
+    createStream() {
+        const startX = Math.floor(Math.random() * this.width);
+        const startY = Math.floor(Math.random() * this.height);
+        
+        let x = startX;
+        let y = startY;
+        let length = 8 + Math.floor(Math.random() * 15);
+        
+        for (let i = 0; i < length; i++) {
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' || tile.type === 'dirt') {
+                    tile.type = 'stream';
+                    tile.collision = true;
+                }
+            }
+            
+            const dir = Math.random();
+            if (dir < 0.3) x++;
+            else if (dir < 0.6) x--;
+            else if (dir < 0.8) y++;
+            else y--;
+        }
+    }
+
+    generateDirtRoads() {
+        const roadCount = 2 + Math.floor(Math.random() * 2);
+        
+        for (let i = 0; i < roadCount; i++) {
+            this.createRoad();
+        }
+    }
+
+    createRoad() {
+        const isHorizontal = Math.random() > 0.5;
+        const startPos = Math.floor(Math.random() * (isHorizontal ? this.width : this.height));
+        const startFixed = Math.floor(Math.random() * (isHorizontal ? this.height : this.width));
+        const length = 15 + Math.floor(Math.random() * 20);
+        
+        for (let i = 0; i < length; i++) {
+            const x = isHorizontal ? startPos + i : startFixed;
+            const y = isHorizontal ? startFixed : startPos + i;
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass') {
+                    tile.type = 'dirt';
+                    tile.collision = false;
+                    tile.buildable = false;
+                }
+            }
+        }
+    }
+
+    generateStonePatches() {
+        const stoneCount = 8 + Math.floor(Math.random() * 8);
+        
+        for (let i = 0; i < stoneCount; i++) {
+            const centerX = Math.floor(Math.random() * this.width);
+            const centerY = Math.floor(Math.random() * this.height);
+            const radius = 1 + Math.floor(Math.random() * 2);
+            
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const x = centerX + dx;
+                    const y = centerY + dy;
+                    
+                    if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                        const tile = this.tiles[y][x];
+                        if (tile.type === 'grass' && Math.random() > 0.3) {
+                            tile.type = 'stone';
+                            tile.collision = false;
+                            tile.buildable = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    generateForestClusters() {
+        const clusterCount = 4 + Math.floor(Math.random() * 4);
+        
+        for (let i = 0; i < clusterCount; i++) {
+            this.createForestCluster();
+        }
+    }
+
+    createForestCluster() {
+        const centerX = Math.floor(Math.random() * this.width);
+        const centerY = Math.floor(Math.random() * this.height);
+        const radius = 5 + Math.floor(Math.random() * 6);
+        
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist <= radius) {
+                    const x = centerX + dx;
+                    const y = centerY + dy;
+                    
+                    if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                        const tile = this.tiles[y][x];
+                        if (tile.type === 'grass') {
+                            const rand = Math.random();
+                            if (rand < 0.4) {
+                                tile.type = 'forest';
+                                tile.vegetation = 'tree';
+                            } else if (rand < 0.6) {
+                                tile.vegetation = 'bush';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    generateScatteredVegetation() {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation) {
+                    const rand = Math.random();
+                    if (rand < 0.08) {
+                        tile.vegetation = Math.random() > 0.4 ? 'tree' : 'bush';
+                    }
+                }
+            }
+        }
     }
 
     createSpawnArea() {
@@ -154,21 +289,21 @@ export class GameMap {
 
     renderTile(ctx, tile, x, y) {
         const colors = {
-            water: 'rgba(30, 144, 255, 0.9)',
-            sand: 'rgba(244, 164, 96, 0.85)',
-            grass: 'rgba(34, 139, 34, 0.3)',
-            forest: 'rgba(34, 139, 34, 0.5)',
-            rock: 'rgba(128, 128, 128, 0.9)',
-            mountain: 'rgba(105, 105, 105, 0.9)',
-            farmland: 'rgba(205, 133, 63, 0.8)'
+            water: '#1e6b8a',
+            sand: '#d4a574',
+            grass: '#5a8f2a',
+            forest: '#2d5a1f',
+            rock: '#6b6b6b',
+            mountain: '#555555',
+            farmland: '#b8860b',
+            dirt: '#8b7355',
+            stone: '#7a7a7a',
+            stream: '#2e8b9a'
         };
         
-        ctx.fillStyle = colors[tile.type] || 'rgba(50, 50, 50, 0.5)';
-        ctx.fillRect(x, y, this.tileSize, this.tileSize);
+        const baseColor = colors[tile.type] || '#444444';
         
-        ctx.strokeStyle = 'rgba(26, 26, 26, 0.3)';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(x, y, this.tileSize, this.tileSize);
+        this.drawTexturedTile(ctx, tile.type, x, y, baseColor);
         
         if (tile.vegetation) {
             this.renderVegetation(ctx, tile.vegetation, x, y);
@@ -177,28 +312,206 @@ export class GameMap {
         if (tile.type === 'farmland') {
             this.renderFarmland(ctx, x, y);
         }
+        
+        if (tile.type === 'stone') {
+            this.renderStone(ctx, x, y);
+        }
+    }
+
+    drawTexturedTile(ctx, type, x, y, baseColor) {
+        ctx.fillStyle = baseColor;
+        ctx.fillRect(x, y, this.tileSize, this.tileSize);
+        
+        if (type === 'grass') {
+            this.drawGrassTexture(ctx, x, y);
+        } else if (type === 'water' || type === 'stream') {
+            this.drawWaterTexture(ctx, x, y);
+        } else if (type === 'sand') {
+            this.drawSandTexture(ctx, x, y);
+        } else if (type === 'rock' || type === 'mountain') {
+            this.drawRockTexture(ctx, x, y, type);
+        } else if (type === 'dirt') {
+            this.drawDirtTexture(ctx, x, y);
+        }
+    }
+
+    drawGrassTexture(ctx, x, y) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        
+        for (let i = 0; i < 8; i++) {
+            const gx = x + Math.random() * this.tileSize;
+            const gy = y + Math.random() * this.tileSize;
+            const length = 4 + Math.random() * 6;
+            const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+            
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx + Math.cos(angle) * length, gy - Math.sin(angle) * length);
+            ctx.strokeStyle = '#4a7c23';
+            ctx.lineWidth = 1;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+        
+        for (let i = 0; i < 3; i++) {
+            const fx = x + Math.random() * this.tileSize;
+            const fy = y + Math.random() * this.tileSize;
+            const flowerSize = 1.5 + Math.random() * 1.5;
+            const flowerColor = Math.random() > 0.6 ? '#ff69b4' : Math.random() > 0.5 ? '#ffd700' : '#ffffff';
+            
+            ctx.beginPath();
+            ctx.arc(fx, fy, flowerSize, 0, Math.PI * 2);
+            ctx.fillStyle = flowerColor;
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+
+    drawWaterTexture(ctx, x, y) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        
+        ctx.strokeStyle = '#4da6ff';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            const offset = (Date.now() / 1000 + i * 0.5) % 2;
+            ctx.moveTo(x, y + 10 + i * 10 + offset);
+            ctx.bezierCurveTo(
+                x + this.tileSize * 0.3, y + 8 + i * 10 - offset,
+                x + this.tileSize * 0.7, y + 12 + i * 10 + offset,
+                x + this.tileSize, y + 10 + i * 10 - offset
+            );
+            ctx.stroke();
+        }
+        
+        ctx.restore();
+    }
+
+    drawSandTexture(ctx, x, y) {
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        
+        for (let i = 0; i < 15; i++) {
+            const sx = x + Math.random() * this.tileSize;
+            const sy = y + Math.random() * this.tileSize;
+            const size = 0.5 + Math.random() * 1;
+            
+            ctx.beginPath();
+            ctx.arc(sx, sy, size, 0, Math.PI * 2);
+            ctx.fillStyle = '#f4d03f';
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+
+    drawRockTexture(ctx, x, y, type) {
+        ctx.save();
+        
+        const darkness = type === 'mountain' ? 0.3 : 0.2;
+        ctx.fillStyle = `rgba(0, 0, 0, ${darkness})`;
+        
+        for (let i = 0; i < 5; i++) {
+            const rx = x + Math.random() * this.tileSize;
+            const ry = y + Math.random() * this.tileSize;
+            const rSize = 3 + Math.random() * 5;
+            
+            ctx.beginPath();
+            ctx.arc(rx, ry, rSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+
+    drawDirtTexture(ctx, x, y) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        
+        for (let i = 0; i < 10; i++) {
+            const dx = x + Math.random() * this.tileSize;
+            const dy = y + Math.random() * this.tileSize;
+            const size = 1 + Math.random() * 2;
+            
+            ctx.beginPath();
+            ctx.arc(dx, dy, size, 0, Math.PI * 2);
+            ctx.fillStyle = '#6b5344';
+            ctx.fill();
+        }
+        
+        ctx.restore();
     }
 
     renderVegetation(ctx, vegetation, x, y) {
         ctx.save();
         
         if (vegetation === 'tree') {
-            ctx.fillStyle = '#228b22';
+            this.renderTree(ctx, x, y);
+        } else if (vegetation === 'bush') {
+            this.renderBush(ctx, x, y);
+        }
+        
+        ctx.restore();
+    }
+
+    renderTree(ctx, x, y) {
+        const trunkWidth = 6;
+        const trunkHeight = 12;
+        
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(x + this.tileSize / 2 - trunkWidth / 2, y + this.tileSize - trunkHeight, trunkWidth, trunkHeight);
+        
+        const foliageColors = ['#2d5a1f', '#3d7a2f', '#4a8f3a'];
+        const foliageLayers = 3;
+        
+        for (let layer = 0; layer < foliageLayers; layer++) {
+            const layerY = y + this.tileSize - trunkHeight - layer * 10;
+            const layerSize = 18 - layer * 4;
+            
+            ctx.fillStyle = foliageColors[layer % foliageColors.length];
             ctx.beginPath();
-            ctx.moveTo(x + this.tileSize / 2, y + 4);
-            ctx.lineTo(x + this.tileSize - 8, y + this.tileSize - 8);
-            ctx.lineTo(x + 8, y + this.tileSize - 8);
+            ctx.moveTo(x + this.tileSize / 2, layerY - layerSize);
+            ctx.lineTo(x + this.tileSize / 2 + layerSize, layerY);
+            ctx.lineTo(x + this.tileSize / 2 - layerSize, layerY);
             ctx.closePath();
             ctx.fill();
+        }
+    }
+
+    renderBush(ctx, x, y) {
+        const bushColors = ['#3d7a2f', '#4a8f3a', '#5a9f4a'];
+        
+        for (let i = 0; i < 3; i++) {
+            const offsetX = (i - 1) * 6;
+            const offsetY = i * 3;
+            const size = 8 - i * 2;
             
-            ctx.fillStyle = '#8b4513';
-            ctx.fillRect(x + this.tileSize / 2 - 3, y + this.tileSize - 8, 6, 8);
-        } else if (vegetation === 'bush') {
-            ctx.fillStyle = '#32cd32';
+            ctx.fillStyle = bushColors[i];
             ctx.beginPath();
-            ctx.arc(x + this.tileSize / 2, y + this.tileSize - 8, 10, 0, Math.PI * 2);
+            ctx.arc(x + this.tileSize / 2 + offsetX, y + this.tileSize - 10 + offsetY, size, 0, Math.PI * 2);
             ctx.fill();
         }
+    }
+
+    renderStone(ctx, x, y) {
+        ctx.save();
+        
+        const stoneColor = '#8a8a8a';
+        const stoneShade = '#6a6a6a';
+        
+        ctx.fillStyle = stoneColor;
+        ctx.beginPath();
+        ctx.ellipse(x + this.tileSize / 2, y + this.tileSize / 2, 10, 8, Math.random() * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = stoneShade;
+        ctx.beginPath();
+        ctx.ellipse(x + this.tileSize / 2 - 3, y + this.tileSize / 2 - 3, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
         
         ctx.restore();
     }
@@ -233,16 +546,19 @@ export class GameMap {
                 if (!tile) continue;
                 
                 const colors = {
-                    water: '#1e90ff',
-                    sand: '#f4a460',
-                    grass: '#228b22',
-                    forest: '#006400',
-                    rock: '#808080',
-                    mountain: '#696969',
-                    farmland: '#cd853f'
+                    water: '#1e6b8a',
+                    sand: '#d4a574',
+                    grass: '#5a8f2a',
+                    forest: '#2d5a1f',
+                    rock: '#6b6b6b',
+                    mountain: '#555555',
+                    farmland: '#b8860b',
+                    dirt: '#8b7355',
+                    stone: '#7a7a7a',
+                    stream: '#2e8b9a'
                 };
                 
-                ctx.fillStyle = colors[tile.type] || '#333';
+                ctx.fillStyle = colors[tile.type] || '#444';
                 ctx.fillRect(x * scale, y * scale, scale, scale);
             }
         }

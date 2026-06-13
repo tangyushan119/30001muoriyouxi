@@ -22,46 +22,58 @@ export class CanvasEngine {
 
     createGrassPattern() {
         const patternCanvas = document.createElement('canvas');
-        patternCanvas.width = 64;
-        patternCanvas.height = 64;
+        patternCanvas.width = 128;
+        patternCanvas.height = 128;
         const ctx = patternCanvas.getContext('2d');
         
-        const gradient = ctx.createLinearGradient(0, 0, 0, 64);
-        gradient.addColorStop(0, '#4a7c23');
-        gradient.addColorStop(0.5, '#5a8f2a');
+        const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 128);
+        gradient.addColorStop(0, '#5a8f2a');
+        gradient.addColorStop(0.5, '#4a7c23');
         gradient.addColorStop(1, '#3d6b1f');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 64, 64);
+        ctx.fillRect(0, 0, 128, 128);
         
-        for (let i = 0; i < 120; i++) {
-            const x = Math.random() * 64;
-            const y = Math.random() * 64;
-            const length = 3 + Math.random() * 8;
-            const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * 128;
+            const y = Math.random() * 128;
+            const length = 4 + Math.random() * 10;
+            const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.4;
             
             ctx.beginPath();
             ctx.moveTo(x, y);
             ctx.lineTo(x + Math.cos(angle) * length, y - Math.sin(angle) * length);
             
             const bladeGradient = ctx.createLinearGradient(x, y, x + Math.cos(angle) * length, y - Math.sin(angle) * length);
-            const brightness = 0.7 + Math.random() * 0.3;
-            bladeGradient.addColorStop(0, `rgba(46, 139, 87, ${brightness})`);
-            bladeGradient.addColorStop(1, `rgba(34, 139, 34, ${brightness * 0.8})`);
+            const brightness = 0.6 + Math.random() * 0.4;
+            const greenShade = Math.random() > 0.5 ? '4a7c23' : '3d6b1f';
+            bladeGradient.addColorStop(0, `#${greenShade}`);
+            bladeGradient.addColorStop(1, `rgba(56, 115, 35, ${brightness * 0.7})`);
             ctx.strokeStyle = bladeGradient;
-            ctx.lineWidth = 1.5 + Math.random() * 1;
+            ctx.lineWidth = 1 + Math.random() * 1.5;
             ctx.lineCap = 'round';
             ctx.stroke();
         }
         
-        for (let i = 0; i < 30; i++) {
-            const x = Math.random() * 64;
-            const y = Math.random() * 64;
+        for (let i = 0; i < 40; i++) {
+            const x = Math.random() * 128;
+            const y = Math.random() * 128;
             const size = 1 + Math.random() * 2;
             
             ctx.beginPath();
             ctx.arc(x, y, size, 0, Math.PI * 2);
-            const flowerColor = Math.random() > 0.7 ? '#ff69b4' : Math.random() > 0.5 ? '#ffd700' : '#ffffff';
+            const flowerColor = Math.random() > 0.7 ? '#ff69b4' : Math.random() > 0.5 ? '#ffd700' : Math.random() > 0.5 ? '#ffffff' : '#ff9966';
             ctx.fillStyle = flowerColor;
+            ctx.fill();
+        }
+        
+        for (let i = 0; i < 25; i++) {
+            const x = Math.random() * 128;
+            const y = Math.random() * 128;
+            const size = 2 + Math.random() * 3;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(139, 119, 101, 0.3)';
             ctx.fill();
         }
         
