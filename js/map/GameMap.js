@@ -13,6 +13,7 @@ export class GameMap {
     init() {
         this.generateMap();
         this.createSpawnArea();
+        this.createResourceEntities();
     }
 
     generateMap() {
@@ -48,7 +49,6 @@ export class GameMap {
         this.generateGrassPatches();
         this.generateBerryBushes();
         this.generateFruitTrees();
-        this.createResourceEntities();
     }
 
     getTileType(x, y) {
@@ -445,8 +445,6 @@ export class GameMap {
                 }
             }
         }
-        
-        this.createResourceEntities();
     }
 
     createFarmPlot(x, y) {
@@ -500,10 +498,6 @@ export class GameMap {
         
         this.drawTexturedTile(ctx, tile.type, x, y, baseColor);
         
-        if (tile.type === 'stone') {
-            this.renderStone(ctx, x, y);
-        }
-        
         if (tile.type === 'farmland') {
             this.renderFarmland(ctx, x, y);
         }
@@ -512,6 +506,10 @@ export class GameMap {
             this.renderFlowerPatch(ctx, x, y);
         } else if (tile.feature === 'rock') {
             this.renderSmallRock(ctx, x, y);
+        } else if (tile.feature === 'grass_patch') {
+            this.renderGrassPatch(ctx, x, y);
+        } else if (tile.feature === 'berry_bush') {
+            this.renderBerryBush(ctx, x, y);
         }
         
         if (tile.vegetation) {
@@ -1002,6 +1000,63 @@ export class GameMap {
 
     getSpawnPoint() {
         return { ...this.spawnPoint };
+    }
+
+    renderGrassPatch(ctx, x, y) {
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+
+        for (let i = 0; i < 5; i++) {
+            const gx = x + 6 + i * 5;
+            const gy = y + this.tileSize - 4;
+            const length = 6 + Math.sin(Date.now() / 300 + i + x) * 1.5;
+            const sway = Math.sin(Date.now() / 250 + i + x) * 1;
+
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx + sway, gy - length);
+            ctx.strokeStyle = '#4a7c23';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    renderBerryBush(ctx, x, y) {
+        ctx.save();
+        
+        const bushColors = ['#3d7a2f', '#4a8f3a'];
+        const swayOffset = Math.sin(Date.now() / 400 + x) * 1;
+
+        for (let i = 0; i < 2; i++) {
+            const offsetX = (i - 0.5) * 10 + swayOffset;
+            const offsetY = i * 4;
+            const size = 10 - i * 3;
+
+            ctx.fillStyle = bushColors[i];
+            ctx.beginPath();
+            ctx.arc(x + this.tileSize / 2 + offsetX, y + this.tileSize - 8 + offsetY, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        for (let i = 0; i < 4; i++) {
+            const bx = x + this.tileSize / 2 + (i - 1.5) * 7 + swayOffset;
+            const by = y + this.tileSize - 10;
+
+            ctx.fillStyle = '#cc2222';
+            ctx.beginPath();
+            ctx.arc(bx, by, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ff6666';
+            ctx.beginPath();
+            ctx.arc(bx - 1, by - 1, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
     }
 
     getSize() {

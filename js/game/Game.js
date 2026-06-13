@@ -28,23 +28,40 @@ export class Game {
     }
 
     async init() {
-        this.canvasEngine = new CanvasEngine('game-canvas');
-        this.gameStore = new GameStore();
-        this.resourceLoader = new ResourceLoader();
-        this.saveManager = new SaveManager();
+        try {
+            this.canvasEngine = new CanvasEngine('game-canvas');
+            this.gameStore = new GameStore();
+            this.resourceLoader = new ResourceLoader();
+            this.saveManager = new SaveManager();
+            
+            this.miniMapCanvas = document.getElementById('mini-map-canvas');
+            this.miniMapCanvas.width = 140;
+            this.miniMapCanvas.height = 140;
+            this.miniMapCtx = this.miniMapCanvas.getContext('2d');
+            
+            this.setupHUD();
+            this.setupEventListeners();
+            this.setupStoreSubscriptions();
+            
+            await this.preloadResources();
+            this.isInitialized = true;
+            
+            this.tryAutoLoadGame();
+        } catch (error) {
+            console.error('Game initialization failed:', error);
+            this.showStartScreen();
+        }
+    }
+    
+    async tryAutoLoadGame() {
+        const saves = this.saveManager.getAllSaves();
+        const latestSave = saves.find(s => s.timestamp !== null);
         
-        this.miniMapCanvas = document.getElementById('mini-map-canvas');
-        this.miniMapCanvas.width = 140;
-        this.miniMapCanvas.height = 140;
-        this.miniMapCtx = this.miniMapCanvas.getContext('2d');
-        
-        this.setupHUD();
-        this.setupEventListeners();
-        this.setupStoreSubscriptions();
-        
-        await this.preloadResources();
-        this.showStartScreen();
-        this.isInitialized = true;
+        if (latestSave) {
+            await this.loadGameFromSlot(latestSave.slot);
+        } else {
+            this.showStartScreen();
+        }
     }
 
     async preloadResources() {
@@ -129,43 +146,55 @@ export class Game {
     async startNewGame() {
         this.showLoadingScreen();
         
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        this.gameStore.actions.resetGame();
-        
-        const seed = Date.now();
-        this.map = new GameMap(seed);
-        this.gameStore.actions.setMapSeed(seed);
-        
-        this.initResourceEntities();
-        
-        const spawnPoint = this.map.getSpawnPoint();
-        this.player = new Player(spawnPoint.x - 16, spawnPoint.y - 24, this.gameStore);
-        this.gameStore.actions.setSpawnPoint(spawnPoint.x, spawnPoint.y);
-        
+        try {
+            this.gameStore.actions.resetGame();
+            
+            const seed = Date.now();
+            this.map = new GameMap(seed);
+            this.gameStore.actions.setMapSeed(seed);
+            
+            const spawnPoint = this.map.getSpawnPoint();
+            
+            this.initResourceEntities();
+            
+            this.player = new Player(spawnPoint.x - 16, spawnPoint.y - 24, this.gameStore);
+            this.gameStore.actions.setSpawnPoint(spawnPoint.x, spawnPoint.y);
+            
+            this.setupRenderables();
+            
+            this.canvasEngine.setCameraPosition(spawnPoint.x, spawnPoint.y);
+            this.canvasEngine.start();
+            
+            this.saveManager.startAutoSave(() => this.gameStore.getStateSnapshot());
+            
+            this.hideAllScreens();
+            this.isGameStarted = true;
+            
+            this.startGameLoop();
+        } catch (error) {
+            console.error('Failed to start new game:', error);
+            alert('启动游戏失败，请重试');
+            this.showStartScreen();
+        }
+    }
+    
+    setupRenderables() {
         this.canvasEngine.renderables = [];
+        
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.map.update(deltaTime),
             render: (ctx) => this.map.render(ctx, this.canvasEngine.camera)
         });
+        
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.updateResourceEntities(deltaTime),
             render: (ctx) => this.renderResourceEntities(ctx)
         });
+        
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.player.update(deltaTime, this.map),
             render: (ctx) => this.player.render(ctx)
         });
-        
-        this.canvasEngine.setCameraPosition(spawnPoint.x, spawnPoint.y);
-        this.canvasEngine.start();
-        
-        this.saveManager.startAutoSave(() => this.gameStore.getStateSnapshot());
-        
-        this.hideAllScreens();
-        this.isGameStarted = true;
-        
-        this.startGameLoop();
     }
 
     startGameLoop() {
@@ -210,7 +239,7 @@ export class Game {
         this.resourceEntities.forEach(entity => {
             entity.update(deltaTime);
             
-            if (entity.isHarvesting && entity.harvestProgress >= entity.harvestDuration) {
+            if (entity.isHarvestComplete()) {
                 const item = entity.completeHarvest();
                 if (item) {
                     this.gameStore.actions.addInventoryItem(item);
@@ -237,22 +266,25 @@ export class Game {
     }
 
     checkNearbyResources() {
-        if (!this.player) return;
+        if (!this.player || !this.resourceEntities.length) return;
         
         const playerPos = this.player.getPosition();
+        const playerCenterX = playerPos.x + this.player.width / 2;
+        const playerCenterY = playerPos.y + this.player.height / 2;
+        
         this.nearbyResources = this.resourceEntities.filter(entity => {
-            return entity.isNearby(playerPos.x + this.player.width / 2, playerPos.y + this.player.height / 2, 60);
+            return !entity.isDepleted && entity.isNearby(playerCenterX, playerCenterY, 60);
         });
         
         if (this.nearbyResources.length > 0 && !this.isHarvesting) {
             this.nearbyResources.sort((a, b) => {
                 const distA = Math.sqrt(
-                    Math.pow(a.x - (playerPos.x + this.player.width / 2), 2) +
-                    Math.pow(a.y - (playerPos.y + this.player.height / 2), 2)
+                    Math.pow(a.x - playerCenterX, 2) +
+                    Math.pow(a.y - playerCenterY, 2)
                 );
                 const distB = Math.sqrt(
-                    Math.pow(b.x - (playerPos.x + this.player.width / 2), 2) +
-                    Math.pow(b.y - (playerPos.y + this.player.height / 2), 2)
+                    Math.pow(b.x - playerCenterX, 2) +
+                    Math.pow(b.y - playerCenterY, 2)
                 );
                 return distA - distB;
             });
@@ -265,7 +297,7 @@ export class Game {
     handleInteraction() {
         if (!this.isGameStarted || this.isHarvesting) return;
         
-        if (this.currentInteractionTarget && !this.currentInteractionTarget.isDepleted) {
+        if (this.currentInteractionTarget && !this.currentInteractionTarget.isDepleted && !this.currentInteractionTarget.isHarvesting) {
             this.startHarvest(this.currentInteractionTarget);
         }
     }
@@ -382,47 +414,39 @@ export class Game {
         this.closeModal();
         this.showLoadingScreen();
         
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const result = this.saveManager.loadGame(slot);
-        
-        if (!result.success) {
-            alert(result.message);
+        try {
+            const result = this.saveManager.loadGame(slot);
+            
+            if (!result.success) {
+                alert(result.message);
+                this.showStartScreen();
+                return;
+            }
+            
+            this.gameStore.actions.loadGame(result.data);
+            
+            const savedState = result.data;
+            
+            this.map = new GameMap(savedState.map.seed);
+            this.initResourceEntities();
+            this.player = new Player(savedState.player.x, savedState.player.y, this.gameStore);
+            
+            this.setupRenderables();
+            
+            this.canvasEngine.setCameraPosition(savedState.player.x, savedState.player.y);
+            this.canvasEngine.start();
+            
+            this.saveManager.startAutoSave(() => this.gameStore.getStateSnapshot());
+            
+            this.hideAllScreens();
+            this.isGameStarted = true;
+            
+            this.startGameLoop();
+        } catch (error) {
+            console.error('Failed to load game:', error);
+            alert('加载存档失败，请重试');
             this.showStartScreen();
-            return;
         }
-        
-        this.gameStore.actions.loadGame(result.data);
-        
-        const savedState = result.data;
-        
-        this.map = new GameMap(savedState.map.seed);
-        this.initResourceEntities();
-        this.player = new Player(savedState.player.x, savedState.player.y, this.gameStore);
-        
-        this.canvasEngine.renderables = [];
-        this.canvasEngine.addRenderable({
-            update: (deltaTime) => this.map.update(deltaTime),
-            render: (ctx) => this.map.render(ctx, this.canvasEngine.camera)
-        });
-        this.canvasEngine.addRenderable({
-            update: (deltaTime) => this.updateResourceEntities(deltaTime),
-            render: (ctx) => this.renderResourceEntities(ctx)
-        });
-        this.canvasEngine.addRenderable({
-            update: (deltaTime) => this.player.update(deltaTime, this.map),
-            render: (ctx) => this.player.render(ctx)
-        });
-        
-        this.canvasEngine.setCameraPosition(savedState.player.x, savedState.player.y);
-        this.canvasEngine.start();
-        
-        this.saveManager.startAutoSave(() => this.gameStore.getStateSnapshot());
-        
-        this.hideAllScreens();
-        this.isGameStarted = true;
-        
-        this.startGameLoop();
     }
 
     gameOver() {

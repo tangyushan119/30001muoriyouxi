@@ -56,9 +56,6 @@ export class ResourceEntity {
     update(deltaTime) {
         if (this.isHarvesting) {
             this.harvestProgress += deltaTime;
-            if (this.harvestProgress >= this.harvestDuration) {
-                this.completeHarvest();
-            }
         } else if (this.isDepleted) {
             this.regenerationTimer += deltaTime;
             if (this.regenerationTimer >= this.regenerationDelay) {
@@ -71,6 +68,10 @@ export class ResourceEntity {
             this.animationTimer = 0;
             this.animationFrame = (this.animationFrame + 1) % 4;
         }
+    }
+    
+    isHarvestComplete() {
+        return this.isHarvesting && this.harvestProgress >= this.harvestDuration;
     }
 
     startHarvest() {

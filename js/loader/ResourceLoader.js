@@ -43,9 +43,11 @@ export class ResourceLoader {
         this.loadedCount = 0;
         
         const promises = [];
+        const timeoutMs = 10000;
         
         for (const item of this.loadingQueue) {
-            promises.push(this.loadResource(item.type, item.key, item.path));
+            const promise = this.loadResourceWithTimeout(item.type, item.key, item.path, timeoutMs);
+            promises.push(promise);
         }
         
         try {
@@ -57,46 +59,73 @@ export class ResourceLoader {
                 this.onComplete(this.resources);
             }
         } catch (error) {
-            console.error('Failed to load resources:', error);
+            console.warn('Some resources failed to load:', error);
             this.isLoading = false;
+            
+            if (this.onComplete) {
+                this.onComplete(this.resources);
+            }
         }
+    }
+    
+    async loadResourceWithTimeout(type, key, path, timeoutMs) {
+        return new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+                console.warn(`Timeout loading ${type} resource: ${key}`);
+                if (this.resources[type] && this.resources[type][key]) {
+                    this.resources[type][key].loaded = false;
+                }
+                this.loadedCount++;
+                this.notifyProgress();
+                resolve(null);
+            }, timeoutMs);
+            
+            this.loadResource(type, key, path)
+                .then((result) => {
+                    clearTimeout(timeoutId);
+                    resolve(result);
+                })
+                .catch((error) => {
+                    clearTimeout(timeoutId);
+                    console.warn(`Failed to load ${type} resource: ${key}`, error);
+                    if (this.resources[type] && this.resources[type][key]) {
+                        this.resources[type][key].loaded = false;
+                    }
+                    this.loadedCount++;
+                    this.notifyProgress();
+                    resolve(null);
+                });
+        });
     }
 
     async loadResource(type, key, path) {
-        try {
-            let data = null;
-            
-            switch (type) {
-                case 'image':
-                    data = await this.loadImage(path);
-                    break;
-                case 'json':
-                    data = await this.loadJSON(path);
-                    break;
-                case 'audio':
-                    data = await this.loadAudio(path);
-                    break;
-                case 'text':
-                    data = await this.loadText(path);
-                    break;
-                default:
-                    console.warn(`Unknown resource type: ${type}`);
-                    return;
-            }
-            
-            if (this.resources[type] && this.resources[type][key]) {
-                this.resources[type][key].data = data;
-                this.resources[type][key].loaded = true;
-                this.cache.set(`${type}:${key}`, data);
-            }
-            
-            this.loadedCount++;
-            this.notifyProgress();
-        } catch (error) {
-            console.error(`Failed to load ${type} resource ${key}:`, error);
-            this.loadedCount++;
-            this.notifyProgress();
+        let data = null;
+        
+        switch (type) {
+            case 'image':
+                data = await this.loadImage(path);
+                break;
+            case 'json':
+                data = await this.loadJSON(path);
+                break;
+            case 'audio':
+                data = await this.loadAudio(path);
+                break;
+            case 'text':
+                data = await this.loadText(path);
+                break;
+            default:
+                console.warn(`Unknown resource type: ${type}`);
+                return null;
         }
+        
+        if (this.resources[type] && this.resources[type][key]) {
+            this.resources[type][key].data = data;
+            this.resources[type][key].loaded = true;
+            this.cache.set(`${type}:${key}`, data);
+        }
+        
+        return data;
     }
 
     async loadImage(path) {

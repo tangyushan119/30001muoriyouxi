@@ -1,9 +1,9 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
 
-const PORT = 8000;
-const PUBLIC_DIR = __dirname;
+const PORT = 8888;
+const PUBLIC_DIR = import.meta.dirname;
 
 const mimeTypes = {
   '.html': 'text/html',
