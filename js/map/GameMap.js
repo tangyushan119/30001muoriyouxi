@@ -27,6 +27,7 @@ export class GameMap {
                     elevation: this.getElevation(x, y),
                     waterLevel: 0,
                     vegetation: null,
+                    feature: null,
                     buildable: this.isBuildable(tileType),
                     farmable: this.isFarmable(tileType),
                     explored: false
@@ -34,11 +35,14 @@ export class GameMap {
             }
         }
         
+        this.generateForestClusters();
         this.generateStreams();
         this.generateDirtRoads();
         this.generateStonePatches();
-        this.generateForestClusters();
+        this.generatePonds();
+        this.generateFlowerPatches();
         this.generateScatteredVegetation();
+        this.generateRocks();
     }
 
     getTileType(x, y) {
@@ -85,7 +89,7 @@ export class GameMap {
     }
 
     generateStreams() {
-        const streamCount = 3 + Math.floor(Math.random() * 3);
+        const streamCount = 5 + Math.floor(Math.random() * 4);
         
         for (let i = 0; i < streamCount; i++) {
             this.createStream();
@@ -98,27 +102,30 @@ export class GameMap {
         
         let x = startX;
         let y = startY;
-        let length = 8 + Math.floor(Math.random() * 15);
+        let length = 12 + Math.floor(Math.random() * 20);
+        
+        const direction = Math.random() > 0.5 ? 1 : -1;
         
         for (let i = 0; i < length; i++) {
             if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
                 const tile = this.tiles[y][x];
-                if (tile.type === 'grass' || tile.type === 'dirt') {
+                if (tile.type === 'grass' || tile.type === 'dirt' || tile.type === 'stone') {
                     tile.type = 'stream';
                     tile.collision = true;
+                    tile.vegetation = null;
                 }
             }
             
             const dir = Math.random();
-            if (dir < 0.3) x++;
-            else if (dir < 0.6) x--;
-            else if (dir < 0.8) y++;
+            if (dir < 0.25) x += direction;
+            else if (dir < 0.5) x -= direction;
+            else if (dir < 0.7) y++;
             else y--;
         }
     }
 
     generateDirtRoads() {
-        const roadCount = 2 + Math.floor(Math.random() * 2);
+        const roadCount = 4 + Math.floor(Math.random() * 3);
         
         for (let i = 0; i < roadCount; i++) {
             this.createRoad();
@@ -129,7 +136,7 @@ export class GameMap {
         const isHorizontal = Math.random() > 0.5;
         const startPos = Math.floor(Math.random() * (isHorizontal ? this.width : this.height));
         const startFixed = Math.floor(Math.random() * (isHorizontal ? this.height : this.width));
-        const length = 15 + Math.floor(Math.random() * 20);
+        const length = 20 + Math.floor(Math.random() * 30);
         
         for (let i = 0; i < length; i++) {
             const x = isHorizontal ? startPos + i : startFixed;
@@ -137,34 +144,55 @@ export class GameMap {
             
             if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
                 const tile = this.tiles[y][x];
-                if (tile.type === 'grass') {
+                if (tile.type === 'grass' || tile.type === 'stone') {
                     tile.type = 'dirt';
                     tile.collision = false;
                     tile.buildable = false;
+                    tile.vegetation = null;
+                }
+            }
+            
+            if (i > 0 && i < length - 1 && Math.random() < 0.1) {
+                const offsetX = isHorizontal ? 0 : (Math.random() > 0.5 ? 1 : -1);
+                const offsetY = isHorizontal ? (Math.random() > 0.5 ? 1 : -1) : 0;
+                const sideX = x + offsetX;
+                const sideY = y + offsetY;
+                
+                if (sideX >= 0 && sideX < this.width && sideY >= 0 && sideY < this.height) {
+                    const sideTile = this.tiles[sideY][sideX];
+                    if (sideTile.type === 'grass') {
+                        sideTile.type = 'dirt';
+                        sideTile.collision = false;
+                        sideTile.buildable = false;
+                    }
                 }
             }
         }
     }
 
     generateStonePatches() {
-        const stoneCount = 8 + Math.floor(Math.random() * 8);
+        const stoneCount = 12 + Math.floor(Math.random() * 10);
         
         for (let i = 0; i < stoneCount; i++) {
             const centerX = Math.floor(Math.random() * this.width);
             const centerY = Math.floor(Math.random() * this.height);
-            const radius = 1 + Math.floor(Math.random() * 2);
+            const radius = 2 + Math.floor(Math.random() * 3);
             
             for (let dy = -radius; dy <= radius; dy++) {
                 for (let dx = -radius; dx <= radius; dx++) {
-                    const x = centerX + dx;
-                    const y = centerY + dy;
-                    
-                    if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
-                        const tile = this.tiles[y][x];
-                        if (tile.type === 'grass' && Math.random() > 0.3) {
-                            tile.type = 'stone';
-                            tile.collision = false;
-                            tile.buildable = false;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= radius) {
+                        const x = centerX + dx;
+                        const y = centerY + dy;
+                        
+                        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                            const tile = this.tiles[y][x];
+                            if (tile.type === 'grass' && Math.random() > 0.4) {
+                                tile.type = 'stone';
+                                tile.collision = false;
+                                tile.buildable = false;
+                                tile.vegetation = null;
+                            }
                         }
                     }
                 }
@@ -173,7 +201,7 @@ export class GameMap {
     }
 
     generateForestClusters() {
-        const clusterCount = 4 + Math.floor(Math.random() * 4);
+        const clusterCount = 6 + Math.floor(Math.random() * 5);
         
         for (let i = 0; i < clusterCount; i++) {
             this.createForestCluster();
@@ -183,7 +211,7 @@ export class GameMap {
     createForestCluster() {
         const centerX = Math.floor(Math.random() * this.width);
         const centerY = Math.floor(Math.random() * this.height);
-        const radius = 5 + Math.floor(Math.random() * 6);
+        const radius = 6 + Math.floor(Math.random() * 8);
         
         for (let dy = -radius; dy <= radius; dy++) {
             for (let dx = -radius; dx <= radius; dx++) {
@@ -196,10 +224,15 @@ export class GameMap {
                         const tile = this.tiles[y][x];
                         if (tile.type === 'grass') {
                             const rand = Math.random();
-                            if (rand < 0.4) {
+                            const density = 1 - dist / radius;
+                            
+                            if (rand < density * 0.5) {
                                 tile.type = 'forest';
                                 tile.vegetation = 'tree';
-                            } else if (rand < 0.6) {
+                            } else if (rand < density * 0.7) {
+                                tile.type = 'forest';
+                                tile.vegetation = 'bush';
+                            } else if (rand < density * 0.8) {
                                 tile.vegetation = 'bush';
                             }
                         }
@@ -215,9 +248,81 @@ export class GameMap {
                 const tile = this.tiles[y][x];
                 if (tile.type === 'grass' && !tile.vegetation) {
                     const rand = Math.random();
-                    if (rand < 0.08) {
-                        tile.vegetation = Math.random() > 0.4 ? 'tree' : 'bush';
+                    if (rand < 0.12) {
+                        tile.vegetation = Math.random() > 0.35 ? 'tree' : 'bush';
                     }
+                }
+            }
+        }
+    }
+
+    generatePonds() {
+        const pondCount = 3 + Math.floor(Math.random() * 3);
+        
+        for (let i = 0; i < pondCount; i++) {
+            const centerX = Math.floor(Math.random() * this.width);
+            const centerY = Math.floor(Math.random() * this.height);
+            const radius = 2 + Math.floor(Math.random() * 3);
+            
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= radius) {
+                        const x = centerX + dx;
+                        const y = centerY + dy;
+                        
+                        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                            const tile = this.tiles[y][x];
+                            if (tile.type === 'grass') {
+                                tile.type = 'water';
+                                tile.collision = true;
+                                tile.vegetation = null;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    generateFlowerPatches() {
+        const patchCount = 10 + Math.floor(Math.random() * 8);
+        
+        for (let i = 0; i < patchCount; i++) {
+            const centerX = Math.floor(Math.random() * this.width);
+            const centerY = Math.floor(Math.random() * this.height);
+            const radius = 1 + Math.floor(Math.random() * 2);
+            
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= radius) {
+                        const x = centerX + dx;
+                        const y = centerY + dy;
+                        
+                        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                            const tile = this.tiles[y][x];
+                            if (tile.type === 'grass' && Math.random() > 0.3) {
+                                tile.feature = 'flower_patch';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    generateRocks() {
+        const rockCount = 15 + Math.floor(Math.random() * 10);
+        
+        for (let i = 0; i < rockCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation && !tile.feature) {
+                    tile.feature = 'rock';
                 }
             }
         }
@@ -226,7 +331,7 @@ export class GameMap {
     createSpawnArea() {
         const centerX = Math.floor(this.width / 2);
         const centerY = Math.floor(this.height / 2);
-        const spawnRadius = 3;
+        const spawnRadius = 4;
         
         for (let dy = -spawnRadius; dy <= spawnRadius; dy++) {
             for (let dx = -spawnRadius; dx <= spawnRadius; dx++) {
@@ -239,14 +344,17 @@ export class GameMap {
                     this.tiles[y][x].buildable = true;
                     this.tiles[y][x].farmable = true;
                     this.tiles[y][x].vegetation = null;
+                    this.tiles[y][x].feature = null;
                 }
             }
         }
         
-        this.createFarmPlot(centerX - 1, centerY - 1);
-        this.createFarmPlot(centerX + 1, centerY - 1);
-        this.createFarmPlot(centerX - 1, centerY + 1);
-        this.createFarmPlot(centerX + 1, centerY + 1);
+        this.createFarmPlot(centerX - 2, centerY - 1);
+        this.createFarmPlot(centerX, centerY - 1);
+        this.createFarmPlot(centerX + 2, centerY - 1);
+        this.createFarmPlot(centerX - 2, centerY + 1);
+        this.createFarmPlot(centerX, centerY + 1);
+        this.createFarmPlot(centerX + 2, centerY + 1);
         
         this.spawnPoint = {
             x: centerX * this.tileSize + this.tileSize / 2,
@@ -305,16 +413,22 @@ export class GameMap {
         
         this.drawTexturedTile(ctx, tile.type, x, y, baseColor);
         
-        if (tile.vegetation) {
-            this.renderVegetation(ctx, tile.vegetation, x, y);
+        if (tile.type === 'stone') {
+            this.renderStone(ctx, x, y);
         }
         
         if (tile.type === 'farmland') {
             this.renderFarmland(ctx, x, y);
         }
         
-        if (tile.type === 'stone') {
-            this.renderStone(ctx, x, y);
+        if (tile.feature === 'flower_patch') {
+            this.renderFlowerPatch(ctx, x, y);
+        } else if (tile.feature === 'rock') {
+            this.renderSmallRock(ctx, x, y);
+        }
+        
+        if (tile.vegetation) {
+            this.renderVegetation(ctx, tile.vegetation, x, y);
         }
     }
 
@@ -512,6 +626,51 @@ export class GameMap {
         ctx.beginPath();
         ctx.ellipse(x + this.tileSize / 2 - 3, y + this.tileSize / 2 - 3, 4, 3, 0, 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.restore();
+    }
+
+    renderSmallRock(ctx, x, y) {
+        ctx.save();
+        
+        const stoneColor = '#7a7a7a';
+        const stoneShade = '#5a5a5a';
+        const size = 4 + Math.random() * 3;
+        
+        ctx.fillStyle = stoneColor;
+        ctx.beginPath();
+        ctx.ellipse(x + this.tileSize / 2, y + this.tileSize / 2 + 4, size, size * 0.8, Math.random() * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = stoneShade;
+        ctx.beginPath();
+        ctx.ellipse(x + this.tileSize / 2 - 2, y + this.tileSize / 2 + 2, size * 0.4, size * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    renderFlowerPatch(ctx, x, y) {
+        ctx.save();
+        
+        const flowerColors = ['#ff69b4', '#ffd700', '#ffffff', '#ff9966', '#9932cc', '#00ced1'];
+        
+        for (let i = 0; i < 6; i++) {
+            const fx = x + Math.random() * this.tileSize;
+            const fy = y + Math.random() * this.tileSize;
+            const size = 2 + Math.random() * 2;
+            const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(fx, fy, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(fx - 0.5, fy - 0.5, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
         ctx.restore();
     }
