@@ -678,7 +678,7 @@ export class GameMap {
     renderFarmland(ctx, x, y) {
         ctx.strokeStyle = '#8b4513';
         ctx.lineWidth = 1;
-        
+
         ctx.beginPath();
         ctx.moveTo(x, y + this.tileSize / 3);
         ctx.lineTo(x + this.tileSize, y + this.tileSize / 3);
@@ -689,6 +689,116 @@ export class GameMap {
         ctx.moveTo(x + (this.tileSize * 2) / 3, y);
         ctx.lineTo(x + (this.tileSize * 2) / 3, y + this.tileSize);
         ctx.stroke();
+    }
+
+    renderTilePatch(ctx, tileType, x, y) {
+        switch(tileType) {
+            case 'water':
+                this.renderWaterPatch(ctx, x, y);
+                break;
+            case 'forest':
+                this.renderForestPatch(ctx, x, y);
+                break;
+            case 'rock':
+                this.renderRockPatch(ctx, x, y);
+                break;
+            default:
+                break;
+        }
+    }
+
+    renderWaterPatch(ctx, x, y) {
+        ctx.fillStyle = '#1e6b8a';
+        ctx.fillRect(x, y, this.tileSize, this.tileSize);
+        
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.strokeStyle = '#4da6ff';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            const offset = (Date.now() / 1000 + i * 0.5) % 2;
+            ctx.moveTo(x, y + 10 + i * 10 + offset);
+            ctx.bezierCurveTo(
+                x + this.tileSize * 0.3, y + 8 + i * 10 - offset,
+                x + this.tileSize * 0.7, y + 12 + i * 10 + offset,
+                x + this.tileSize, y + 10 + i * 10 - offset
+            );
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    renderForestPatch(ctx, x, y) {
+        ctx.fillStyle = '#2d5a1f';
+        ctx.fillRect(x, y, this.tileSize, this.tileSize);
+        
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        
+        for (let i = 0; i < 5; i++) {
+            const gx = x + Math.random() * this.tileSize;
+            const gy = y + Math.random() * this.tileSize;
+            const length = 6 + Math.random() * 8;
+            const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+            
+            ctx.beginPath();
+            ctx.moveTo(gx, gy);
+            ctx.lineTo(gx + Math.cos(angle) * length, gy - Math.sin(angle) * length);
+            ctx.strokeStyle = '#3d7a2f';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+        ctx.restore();
+        
+        const trunkWidth = 4;
+        const trunkHeight = 8;
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(x + this.tileSize / 2 - trunkWidth / 2, y + this.tileSize - trunkHeight - 5, trunkWidth, trunkHeight);
+        
+        const foliageColors = ['#2d5a1f', '#3d7a2f'];
+        for (let layer = 0; layer < 2; layer++) {
+            const layerY = y + this.tileSize - trunkHeight - 8 - layer * 8;
+            const layerSize = 12 - layer * 3;
+            
+            ctx.fillStyle = foliageColors[layer];
+            ctx.beginPath();
+            ctx.moveTo(x + this.tileSize / 2, layerY - layerSize);
+            ctx.lineTo(x + this.tileSize / 2 + layerSize, layerY);
+            ctx.lineTo(x + this.tileSize / 2 - layerSize, layerY);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    renderRockPatch(ctx, x, y) {
+        ctx.fillStyle = '#6b6b6b';
+        ctx.fillRect(x, y, this.tileSize, this.tileSize);
+        
+        ctx.save();
+        
+        const stoneColor = '#8a8a8a';
+        const stoneShade = '#5a5a5a';
+        
+        for (let i = 0; i < 3; i++) {
+            const rx = x + 5 + Math.random() * (this.tileSize - 10);
+            const ry = y + 5 + Math.random() * (this.tileSize - 10);
+            const rSize = 5 + Math.random() * 6;
+            
+            ctx.fillStyle = stoneColor;
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, rSize, rSize * 0.7, Math.random() * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = stoneShade;
+            ctx.beginPath();
+            ctx.ellipse(rx - rSize * 0.3, ry - rSize * 0.3, rSize * 0.4, rSize * 0.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
     }
 
     renderMiniMap(ctx) {
