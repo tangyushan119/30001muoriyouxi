@@ -366,6 +366,87 @@ export class GameMap {
             x: centerX * this.tileSize + this.tileSize / 2,
             y: centerY * this.tileSize + this.tileSize / 2
         };
+        
+        this.generateSpawnResources(centerX, centerY);
+    }
+
+    generateSpawnResources(centerX, centerY) {
+        const resourceRadius = 6;
+        
+        const treePositions = [
+            { dx: -resourceRadius, dy: 0 },
+            { dx: resourceRadius, dy: 0 },
+            { dx: 0, dy: -resourceRadius },
+            { dx: 0, dy: resourceRadius },
+            { dx: -resourceRadius + 2, dy: -resourceRadius + 2 },
+            { dx: resourceRadius - 2, dy: resourceRadius - 2 }
+        ];
+        
+        treePositions.forEach(pos => {
+            const x = centerX + pos.dx;
+            const y = centerY + pos.dy;
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass') {
+                    tile.vegetation = 'tree';
+                }
+            }
+        });
+        
+        const rockPositions = [
+            { dx: -resourceRadius + 1, dy: resourceRadius },
+            { dx: resourceRadius - 1, dy: -resourceRadius },
+            { dx: -resourceRadius + 3, dy: resourceRadius - 2 },
+            { dx: resourceRadius - 3, dy: -resourceRadius + 2 }
+        ];
+        
+        rockPositions.forEach(pos => {
+            const x = centerX + pos.dx;
+            const y = centerY + pos.dy;
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation) {
+                    tile.feature = 'rock';
+                }
+            }
+        });
+        
+        const berryPositions = [
+            { dx: -resourceRadius + 2, dy: -1 },
+            { dx: resourceRadius - 2, dy: 1 },
+            { dx: 1, dy: -resourceRadius + 2 },
+            { dx: -1, dy: resourceRadius - 2 }
+        ];
+        
+        berryPositions.forEach(pos => {
+            const x = centerX + pos.dx;
+            const y = centerY + pos.dy;
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation && !tile.feature) {
+                    tile.feature = 'berry_bush';
+                }
+            }
+        });
+        
+        for (let i = 0; i < 8; i++) {
+            const dx = Math.floor((Math.random() - 0.5) * resourceRadius * 1.5);
+            const dy = Math.floor((Math.random() - 0.5) * resourceRadius * 1.5);
+            const x = centerX + dx;
+            const y = centerY + dy;
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation && !tile.feature) {
+                    tile.feature = 'grass_patch';
+                }
+            }
+        }
+        
+        this.createResourceEntities();
     }
 
     createFarmPlot(x, y) {
