@@ -6,6 +6,7 @@ export class GameMap {
         this.tileSize = 32;
         this.tiles = [];
         this.spawnPoint = { x: 0, y: 0 };
+        this.resourceEntities = [];
         this.init();
     }
 
@@ -16,6 +17,7 @@ export class GameMap {
 
     generateMap() {
         this.tiles = [];
+        this.resourceEntities = [];
         
         for (let y = 0; y < this.height; y++) {
             this.tiles[y] = [];
@@ -43,6 +45,10 @@ export class GameMap {
         this.generateFlowerPatches();
         this.generateScatteredVegetation();
         this.generateRocks();
+        this.generateGrassPatches();
+        this.generateBerryBushes();
+        this.generateFruitTrees();
+        this.createResourceEntities();
     }
 
     getTileType(x, y) {
@@ -834,6 +840,83 @@ export class GameMap {
     }
 
     update(deltaTime) {
+        this.resourceEntities.forEach(entity => {
+            entity.update(deltaTime);
+        });
+    }
+
+    generateGrassPatches() {
+        const grassCount = 40 + Math.floor(Math.random() * 30);
+        
+        for (let i = 0; i < grassCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation && !tile.feature) {
+                    tile.feature = 'grass_patch';
+                }
+            }
+        }
+    }
+
+    generateBerryBushes() {
+        const bushCount = 20 + Math.floor(Math.random() * 15);
+        
+        for (let i = 0; i < bushCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation && !tile.feature) {
+                    tile.feature = 'berry_bush';
+                }
+            }
+        }
+    }
+
+    generateFruitTrees() {
+        const treeCount = 10 + Math.floor(Math.random() * 8);
+        
+        for (let i = 0; i < treeCount; i++) {
+            const x = Math.floor(Math.random() * this.width);
+            const y = Math.floor(Math.random() * this.height);
+            
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                const tile = this.tiles[y][x];
+                if (tile.type === 'grass' && !tile.vegetation && !tile.feature) {
+                    tile.vegetation = 'fruit_tree';
+                }
+            }
+        }
+    }
+
+    createResourceEntities() {
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const tile = this.tiles[y][x];
+                
+                if (tile.vegetation === 'tree') {
+                    this.resourceEntities.push({ type: 'tree', x, y });
+                } else if (tile.vegetation === 'fruit_tree') {
+                    this.resourceEntities.push({ type: 'fruit_tree', x, y });
+                } else if (tile.feature === 'rock') {
+                    this.resourceEntities.push({ type: 'rock', x, y });
+                } else if (tile.feature === 'grass_patch') {
+                    this.resourceEntities.push({ type: 'grass', x, y });
+                } else if (tile.feature === 'bush') {
+                    this.resourceEntities.push({ type: 'bush', x, y });
+                } else if (tile.feature === 'berry_bush') {
+                    this.resourceEntities.push({ type: 'berry_bush', x, y });
+                }
+            }
+        }
+    }
+
+    getResourceEntities() {
+        return this.resourceEntities;
     }
 
     getSpawnPoint() {

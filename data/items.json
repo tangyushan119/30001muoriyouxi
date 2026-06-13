@@ -72,6 +72,42 @@
             "maxStack": 1,
             "toolType": "shovel",
             "efficiency": 1.5
+        },
+        "grass": {
+            "id": "grass",
+            "name": "杂草",
+            "description": "普通的杂草，可以用于编织或喂养动物",
+            "icon": "grass.png",
+            "stackable": true,
+            "maxStack": 99
+        },
+        "apple": {
+            "id": "apple",
+            "name": "苹果",
+            "description": "新鲜的苹果，可食用",
+            "icon": "apple.png",
+            "stackable": true,
+            "maxStack": 99,
+            "healValue": 10,
+            "hungerValue": 15
+        },
+        "berry": {
+            "id": "berry",
+            "name": "浆果",
+            "description": "野生浆果，酸甜可口",
+            "icon": "berry.png",
+            "stackable": true,
+            "maxStack": 99,
+            "healValue": 5,
+            "hungerValue": 10
+        },
+        "log": {
+            "id": "log",
+            "name": "原木",
+            "description": "完整的原木，可加工成木材",
+            "icon": "log.png",
+            "stackable": true,
+            "maxStack": 20
         }
     }
 }

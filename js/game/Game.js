@@ -4,6 +4,7 @@ import { ResourceLoader } from '../loader/ResourceLoader.js';
 import { SaveManager } from '../save/SaveManager.js';
 import { Player } from '../entity/Player.js';
 import { GameMap } from '../map/GameMap.js';
+import { ResourceEntity } from '../entity/ResourceEntity.js';
 
 export class Game {
     constructor() {
@@ -18,6 +19,11 @@ export class Game {
         this.isInitialized = false;
         this.isGameStarted = false;
         this.hudElements = {};
+        this.resourceEntities = [];
+        this.nearbyResources = [];
+        this.currentInteractionTarget = null;
+        this.isHarvesting = false;
+        this.harvestingEntity = null;
         this.init();
     }
 
@@ -82,6 +88,10 @@ export class Game {
             if (e.key === 'Escape' && this.isGameStarted) {
                 this.togglePause();
             }
+            
+            if (e.key === 'e' || e.key === 'E') {
+                this.handleInteraction();
+            }
         });
     }
 
@@ -127,6 +137,8 @@ export class Game {
         this.map = new GameMap(seed);
         this.gameStore.actions.setMapSeed(seed);
         
+        this.initResourceEntities();
+        
         const spawnPoint = this.map.getSpawnPoint();
         this.player = new Player(spawnPoint.x - 16, spawnPoint.y - 24, this.gameStore);
         this.gameStore.actions.setSpawnPoint(spawnPoint.x, spawnPoint.y);
@@ -135,6 +147,10 @@ export class Game {
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.map.update(deltaTime),
             render: (ctx) => this.map.render(ctx, this.canvasEngine.camera)
+        });
+        this.canvasEngine.addRenderable({
+            update: (deltaTime) => this.updateResourceEntities(deltaTime),
+            render: (ctx) => this.renderResourceEntities(ctx)
         });
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.player.update(deltaTime, this.map),
@@ -174,6 +190,109 @@ export class Game {
         if (state.player.health <= 0) {
             this.gameOver();
             return;
+        }
+        
+        this.checkNearbyResources();
+        this.updateInteractionPrompt();
+    }
+
+    initResourceEntities() {
+        this.resourceEntities = [];
+        const mapEntities = this.map.getResourceEntities();
+        
+        mapEntities.forEach(entityData => {
+            const entity = new ResourceEntity(entityData.x, entityData.y, entityData.type, this.map.tileSize);
+            this.resourceEntities.push(entity);
+        });
+    }
+
+    updateResourceEntities(deltaTime) {
+        this.resourceEntities.forEach(entity => {
+            entity.update(deltaTime);
+            
+            if (entity.isHarvesting && entity.harvestProgress >= entity.harvestDuration) {
+                const item = entity.completeHarvest();
+                if (item) {
+                    this.gameStore.actions.addInventoryItem(item);
+                }
+                this.isHarvesting = false;
+                this.harvestingEntity = null;
+            }
+        });
+    }
+
+    renderResourceEntities(ctx) {
+        const camera = this.canvasEngine.camera;
+        const startTileX = Math.floor((camera.x - ctx.canvas.width / 2 / camera.zoom) / this.map.tileSize) - 1;
+        const endTileX = Math.floor((camera.x + ctx.canvas.width / 2 / camera.zoom) / this.map.tileSize) + 1;
+        const startTileY = Math.floor((camera.y - ctx.canvas.height / 2 / camera.zoom) / this.map.tileSize) - 1;
+        const endTileY = Math.floor((camera.y + ctx.canvas.height / 2 / camera.zoom) / this.map.tileSize) + 1;
+        
+        this.resourceEntities.forEach(entity => {
+            if (entity.tileX >= startTileX && entity.tileX <= endTileX &&
+                entity.tileY >= startTileY && entity.tileY <= endTileY) {
+                entity.render(ctx);
+            }
+        });
+    }
+
+    checkNearbyResources() {
+        if (!this.player) return;
+        
+        const playerPos = this.player.getPosition();
+        this.nearbyResources = this.resourceEntities.filter(entity => {
+            return entity.isNearby(playerPos.x + this.player.width / 2, playerPos.y + this.player.height / 2, 60);
+        });
+        
+        if (this.nearbyResources.length > 0 && !this.isHarvesting) {
+            this.nearbyResources.sort((a, b) => {
+                const distA = Math.sqrt(
+                    Math.pow(a.x - (playerPos.x + this.player.width / 2), 2) +
+                    Math.pow(a.y - (playerPos.y + this.player.height / 2), 2)
+                );
+                const distB = Math.sqrt(
+                    Math.pow(b.x - (playerPos.x + this.player.width / 2), 2) +
+                    Math.pow(b.y - (playerPos.y + this.player.height / 2), 2)
+                );
+                return distA - distB;
+            });
+            this.currentInteractionTarget = this.nearbyResources[0];
+        } else {
+            this.currentInteractionTarget = null;
+        }
+    }
+
+    handleInteraction() {
+        if (!this.isGameStarted || this.isHarvesting) return;
+        
+        if (this.currentInteractionTarget && !this.currentInteractionTarget.isDepleted) {
+            this.startHarvest(this.currentInteractionTarget);
+        }
+    }
+
+    startHarvest(entity) {
+        if (entity.isDepleted || entity.isHarvesting) return;
+        
+        this.isHarvesting = true;
+        this.harvestingEntity = entity;
+        entity.startHarvest();
+    }
+
+    updateInteractionPrompt() {
+        const promptElement = document.getElementById('interaction-prompt');
+        
+        if (this.currentInteractionTarget && !this.currentInteractionTarget.isDepleted && !this.isHarvesting) {
+            const prompt = this.currentInteractionTarget.getInteractionPrompt();
+            if (promptElement) {
+                promptElement.innerHTML = `<span class="key">${prompt.key}</span> ${prompt.action}`;
+                promptElement.style.display = 'block';
+                
+                const playerPos = this.player.getPosition();
+                promptElement.style.left = `${playerPos.x + this.player.width / 2 - promptElement.offsetWidth / 2}px`;
+                promptElement.style.top = `${playerPos.y - 30}px`;
+            }
+        } else if (promptElement) {
+            promptElement.style.display = 'none';
         }
     }
 
@@ -278,12 +397,17 @@ export class Game {
         const savedState = result.data;
         
         this.map = new GameMap(savedState.map.seed);
+        this.initResourceEntities();
         this.player = new Player(savedState.player.x, savedState.player.y, this.gameStore);
         
         this.canvasEngine.renderables = [];
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.map.update(deltaTime),
             render: (ctx) => this.map.render(ctx, this.canvasEngine.camera)
+        });
+        this.canvasEngine.addRenderable({
+            update: (deltaTime) => this.updateResourceEntities(deltaTime),
+            render: (ctx) => this.renderResourceEntities(ctx)
         });
         this.canvasEngine.addRenderable({
             update: (deltaTime) => this.player.update(deltaTime, this.map),
