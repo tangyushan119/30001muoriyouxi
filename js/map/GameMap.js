@@ -154,19 +154,19 @@ export class GameMap {
 
     renderTile(ctx, tile, x, y) {
         const colors = {
-            water: '#1e90ff',
-            sand: '#f4a460',
-            grass: '#228b22',
-            forest: '#228b22',
-            rock: '#808080',
-            mountain: '#696969',
-            farmland: '#cd853f'
+            water: 'rgba(30, 144, 255, 0.9)',
+            sand: 'rgba(244, 164, 96, 0.85)',
+            grass: 'rgba(34, 139, 34, 0.3)',
+            forest: 'rgba(34, 139, 34, 0.5)',
+            rock: 'rgba(128, 128, 128, 0.9)',
+            mountain: 'rgba(105, 105, 105, 0.9)',
+            farmland: 'rgba(205, 133, 63, 0.8)'
         };
         
-        ctx.fillStyle = colors[tile.type] || '#333';
+        ctx.fillStyle = colors[tile.type] || 'rgba(50, 50, 50, 0.5)';
         ctx.fillRect(x, y, this.tileSize, this.tileSize);
         
-        ctx.strokeStyle = '#1a1a1a';
+        ctx.strokeStyle = 'rgba(26, 26, 26, 0.3)';
         ctx.lineWidth = 0.5;
         ctx.strokeRect(x, y, this.tileSize, this.tileSize);
         

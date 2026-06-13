@@ -314,5 +314,3 @@ export class Game {
         this.player?.destroy();
     }
 }
-
-window.game = new Game();
